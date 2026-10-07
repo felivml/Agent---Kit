@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thinking Orbs - Demo Interactivo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background: #09090b;
+      color: #f4f4f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 1.5rem;
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .canvas-container {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      width: 160px;
+      height: 160px;
+    }
+    .glow {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .status-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fafafa;
+      text-transform: capitalize;
+    }
+    .status-desc {
+      font-size: 0.875rem;
+      color: #a1a1aa;
+      text-align: center;
+    }
+    .buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    button {
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      color: #e4e4e7;
+      padding: 0.6rem 0.5rem;
+      border-radius: 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    button:hover {
+      background: #3f3f46;
+      border-color: #71717a;
+    }
+    button.active {
+      background: #7c3aed;
+      border-color: #a78bfa;
+      color: #fff;
+      box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+    }
+    .footer-note {
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: #71717a;
+      text-align: center;
+    }
+    .footer-note a {
+      color: #a78bfa;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="canvas-container">
+      <div class="glow" id="glow"></div>
+      <canvas id="orbCanvas" width="320" height="320"></canvas>
+    </div>
+
+    <div style="text-align: center;">
+      <div class="status-text" id="statusLabel">Thinking...</div>
+      <div class="status-desc" id="statusDesc">El modelo está procesando la lógica interna.</div>
+    </div>
+
+    <div class="buttons-grid">
+      <button onclick="setState('idle', this)">Idle</button>
+      <button onclick="setState('listening', this)">Listening</button>
+      <button onclick="setState('searching', this)">Searching</button>
+      <button class="active" onclick="setState('thinking', this)">Thinking</button>
+      <button onclick="setState('solving', this)">Solving</button>
+      <button onclick="setState('composing', this)">Composing</button>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Diseñado por <a href="https://github.com/Jakubantalik/thinking-orbs" target="_blank">Jakub Antalík</a> • Toolkit Senior Antigravity
+  </div>
+
+  <script>
+    const canvas = document.getElementById('orbCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusLabel = document.getElementById('statusLabel');
+    const statusDesc = document.getElementById('statusDesc');
+
+    let currentState = 'thinking';
+    const numParticles = 120;
+    const particles = [];
+
+    // Inicializar partículas
+    for (let i = 0; i < numParticles; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos((Math.random() * 2) - 1);
+      particles.push({
+        theta,
+        phi,
+        baseRadius: 65,
+        radius: 65,
+        speed: 0.015 + Math.random() * 0.01,
+        color: { r: 168, g: 85, b: 247 } // Violeta por defecto
+      });
+    }
+
+    const stateMeta = {
+      idle: { label: 'Idle', desc: 'En espera sutil, esperando instrucciones del usuario.', color: { r: 148, g: 163, b: 184 }, speed: 0.008, wobble: 2 },
+      listening: { label: 'Listening...', desc: 'Captando entrada de voz o texto en tiempo real.', color: { r: 56, g: 189, b: 248 }, speed: 0.02, wobble: 12 },
+      searching: { label: 'Searching...', desc: 'Barriendo base de datos y fuentes de información.', color: { r: 52, g: 211, b: 153 }, speed: 0.04, wobble: 25 },
+      thinking: { label: 'Thinking...', desc: 'Procesando lógica interna y razonamiento.', color: { r: 168, g: 85, b: 247 }, speed: 0.025, wobble: 6 },
+      solving: { label: 'Solving...', desc: 'Calculando la solución óptima y tomando decisiones.', color: { r: 251, g: 146, b: 60 }, speed: 0.05, wobble: 18 },
+      composing: { label: 'Composing...', desc: 'Estructurando y redactando la respuesta final.', color: { r: 244, g: 114, b: 182 }, speed: 0.03, wobble: 8 }
+    };
+
+    function setState(name, btn) {
+      currentState = name;
+      const meta = stateMeta[name];
+      statusLabel.textContent = meta.label;
+      statusDesc.textContent = meta.desc;
+      
+      document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+
+    let time = 0;
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const meta = stateMeta[currentState];
+
+      time += meta.speed;
+
+      particles.forEach((p, index) => {
+        // Dinámica según el estado
+        let wobble = Math.sin(time * 3 + index) * meta.wobble;
+        let r = p.baseRadius + wobble;
+
+        // Proyección 3D a 2D
+        const x = r * Math.sin(p.phi) * Math.cos(p.theta + time);
+        const y = r * Math.sin(p.phi) * Math.sin(p.theta + time);
+        const z = r * Math.cos(p.phi);
+
+        const scale = (z + 100) / 160;
+        const alpha = Math.max(0.15, (z + 80) / 140);
+        const dotSize = Math.max(1.2, 2.8 * scale);
+
+        ctx.beginPath();
+        ctx.arc(cx + x, cy + y, dotSize, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${meta.color.r}, ${meta.color.g}, ${meta.color.b}, ${alpha})`;
+        ctx.fill();
+      });
+
+      requestAnimationFrame(render);
+    }
+
+    render();
+  </script>
+</body>
+</html>

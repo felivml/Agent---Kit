@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+
+# Environment & Credentials
+.env
+.env.local
+*.log
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Temporary Files
+.vscode/
+.idea/
+*.swp
+*.swo
